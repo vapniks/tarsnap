@@ -8,12 +8,14 @@
  * for code wanting to support 1.0.x is to backport these accessor functions.
  *
  * The function prototypes should be the same as:
+ *   https://www.openssl.org/docs/man1.1.0/crypto/RSA_bits.html
  *   https://www.openssl.org/docs/man1.1.0/crypto/RSA_set0_key.html
  *   https://github.com/openssl/openssl/blob/OpenSSL_1_1_0-stable/include/openssl/rsa.h
  * (other than formatting)
  */
 #if OPENSSL_VERSION_NUMBER < 0x10100000L
 #include <openssl/rsa.h>
+int RSA_bits(const RSA * r);
 
 int RSA_set0_key(RSA * r, BIGNUM * n, BIGNUM * e, BIGNUM * d);
 int RSA_set0_factors(RSA * r, BIGNUM * p, BIGNUM * q);

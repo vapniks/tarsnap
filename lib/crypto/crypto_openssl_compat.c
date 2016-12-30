@@ -4,11 +4,19 @@
  * These functions are copied from:
  *   https://wiki.openssl.org/index.php/1.1_API
  * and should be the same as
+ * - RSA_bits():
+ *   https://github.com/openssl/openssl/blob/OpenSSL_1_1_0-stable/crypto/rsa/rsa_crpt.c
  * - RSA_{set0,get0}_*():
  *   https://github.com/openssl/openssl/blob/OpenSSL_1_1_0-stable/crypto/rsa/rsa_lib.c
  * (other than formatting)
  */
 #if OPENSSL_VERSION_NUMBER < 0x10100000L
+
+int
+RSA_bits(const RSA * r)
+{
+	return (BN_num_bits(r->n));
+}
 
 int
 RSA_set0_key(RSA * r, BIGNUM * n, BIGNUM * e, BIGNUM * d)

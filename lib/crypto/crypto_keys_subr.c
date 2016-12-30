@@ -12,6 +12,7 @@
 #include <openssl/rsa.h>
 
 #include "crypto_entropy.h"
+#include "crypto_openssl_compat.h"
 #include "sysendian.h"
 #include "warnp.h"
 
@@ -164,6 +165,7 @@ err0:
 int
 crypto_keys_subr_import_RSA_priv(RSA ** key, const uint8_t * buf, size_t buflen)
 {
+	BIGNUM *n, *e, *d, *p, *q, *dmp1, *dmq1, *iqmp;
 
 	/* Free any existing key. */
 	if (*key != NULL)
@@ -175,22 +177,30 @@ crypto_keys_subr_import_RSA_priv(RSA ** key, const uint8_t * buf, size_t buflen)
 		goto err0;
 	}
 
-	/* Load values. */
-	if (import_BN(&(*key)->n, &buf, &buflen))
+	/* Load values into local variables. */
+	if (import_BN(&n, &buf, &buflen))
 		goto err1;
-	if (import_BN(&(*key)->e, &buf, &buflen))
+	if (import_BN(&e, &buf, &buflen))
 		goto err1;
-	if (import_BN(&(*key)->d, &buf, &buflen))
+	if (import_BN(&d, &buf, &buflen))
 		goto err1;
-	if (import_BN(&(*key)->p, &buf, &buflen))
+	if (import_BN(&p, &buf, &buflen))
 		goto err1;
-	if (import_BN(&(*key)->q, &buf, &buflen))
+	if (import_BN(&q, &buf, &buflen))
 		goto err1;
-	if (import_BN(&(*key)->dmp1, &buf, &buflen))
+	if (import_BN(&dmp1, &buf, &buflen))
 		goto err1;
-	if (import_BN(&(*key)->dmq1, &buf, &buflen))
+	if (import_BN(&dmq1, &buf, &buflen))
 		goto err1;
-	if (import_BN(&(*key)->iqmp, &buf, &buflen))
+	if (import_BN(&iqmp, &buf, &buflen))
+		goto err1;
+
+	/* Load values into the RSA key. */
+	if (RSA_set0_key(*key, n, e, d) != 1)
+		goto err1;
+	if (RSA_set0_factors(*key, p, q) != 1)
+		goto err1;
+	if (RSA_set0_crt_params(*key, dmp1, dmq1, iqmp) != 1)
 		goto err1;
 
 	/* We should have no unprocessed data left. */
@@ -215,6 +225,7 @@ err0:
 int
 crypto_keys_subr_import_RSA_pub(RSA ** key, const uint8_t * buf, size_t buflen)
 {
+	BIGNUM *n, *e;
 
 	/* Free any existing key. */
 	if (*key != NULL)
@@ -226,10 +237,14 @@ crypto_keys_subr_import_RSA_pub(RSA ** key, const uint8_t * buf, size_t buflen)
 		goto err0;
 	}
 
-	/* Load values. */
-	if (import_BN(&(*key)->n, &buf, &buflen))
+	/* Load values into local variables. */
+	if (import_BN(&n, &buf, &buflen))
 		goto err1;
-	if (import_BN(&(*key)->e, &buf, &buflen))
+	if (import_BN(&e, &buf, &buflen))
+		goto err1;
+
+	/* Load values into the RSA key. */
+	if (RSA_set0_key(*key, n, e, NULL) != 1)
 		goto err1;
 
 	/* We should have no unprocessed data left. */
@@ -299,6 +314,7 @@ err0:
 uint32_t
 crypto_keys_subr_export_RSA_priv(RSA * key, uint8_t * buf, size_t buflen)
 {
+	const BIGNUM *n, *e, *d, *p, *q, *dmp1, *dmq1, *iqmp;
 	uint32_t len = 0;
 
 	if (key == NULL) {
@@ -307,21 +323,24 @@ crypto_keys_subr_export_RSA_priv(RSA * key, uint8_t * buf, size_t buflen)
 	}
 
 	/* Each large integer gets exported. */
-	if (export_BN(key->n, &buf, &buflen, &len))
+	RSA_get0_key(key, &n, &e, &d);
+	RSA_get0_factors(key, &p, &q);
+	RSA_get0_crt_params(key, &dmp1, &dmq1, &iqmp);
+	if (export_BN(n, &buf, &buflen, &len))
 		goto err0;
-	if (export_BN(key->e, &buf, &buflen, &len))
+	if (export_BN(e, &buf, &buflen, &len))
 		goto err0;
-	if (export_BN(key->d, &buf, &buflen, &len))
+	if (export_BN(d, &buf, &buflen, &len))
 		goto err0;
-	if (export_BN(key->p, &buf, &buflen, &len))
+	if (export_BN(p, &buf, &buflen, &len))
 		goto err0;
-	if (export_BN(key->q, &buf, &buflen, &len))
+	if (export_BN(q, &buf, &buflen, &len))
 		goto err0;
-	if (export_BN(key->dmp1, &buf, &buflen, &len))
+	if (export_BN(dmp1, &buf, &buflen, &len))
 		goto err0;
-	if (export_BN(key->dmq1, &buf, &buflen, &len))
+	if (export_BN(dmq1, &buf, &buflen, &len))
 		goto err0;
-	if (export_BN(key->iqmp, &buf, &buflen, &len))
+	if (export_BN(iqmp, &buf, &buflen, &len))
 		goto err0;
 
 	/* Success! */
@@ -340,6 +359,7 @@ err0:
 uint32_t
 crypto_keys_subr_export_RSA_pub(RSA * key, uint8_t * buf, size_t buflen)
 {
+	const BIGNUM *n, *e;
 	uint32_t len = 0;
 
 	if (key == NULL) {
@@ -348,9 +368,10 @@ crypto_keys_subr_export_RSA_pub(RSA * key, uint8_t * buf, size_t buflen)
 	}
 
 	/* Each large integer gets exported. */
-	if (export_BN(key->n, &buf, &buflen, &len))
+	RSA_get0_key(key, &n, &e, NULL);
+	if (export_BN(n, &buf, &buflen, &len))
 		goto err0;
-	if (export_BN(key->e, &buf, &buflen, &len))
+	if (export_BN(e, &buf, &buflen, &len))
 		goto err0;
 
 	/* Success! */

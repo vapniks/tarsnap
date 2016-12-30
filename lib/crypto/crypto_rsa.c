@@ -9,6 +9,7 @@
 #include <openssl/rsa.h>
 
 #include "crypto_entropy.h"
+#include "crypto_openssl_compat.h"
 #include "crypto_verify_bytes.h"
 #include "sysendian.h"
 #include "warnp.h"
@@ -81,7 +82,7 @@ crypto_rsa_sign(int key, const uint8_t * data, size_t len,
 		goto err0;
 
 	/* Make sure the key and signature buffer are the correct size. */
-	if ((RSA_size(rsa) != 256) || (BN_num_bits(rsa->n) != 2048)) {
+	if ((RSA_size(rsa) != 256) || (RSA_bits(rsa) != 2048)) {
 		warn0("RSA key is incorrect size");
 		goto err0;
 	}
@@ -176,7 +177,7 @@ crypto_rsa_verify(int key, const uint8_t * data, size_t len,
 		goto err0;
 
 	/* Make sure the key and signature buffer are the correct size. */
-	if ((RSA_size(rsa) != 256) || (BN_num_bits(rsa->n) != 2048)) {
+	if ((RSA_size(rsa) != 256) || (RSA_bits(rsa) != 2048)) {
 		warn0("RSA key is incorrect size");
 		goto err0;
 	}
@@ -292,7 +293,7 @@ crypto_rsa_encrypt(int key, const uint8_t * data, size_t len,
 		goto err0;
 
 	/* Make sure the key and ciphertext buffer are the correct size. */
-	if ((RSA_size(rsa) != 256) || (BN_num_bits(rsa->n) != 2048)) {
+	if ((RSA_size(rsa) != 256) || (RSA_bits(rsa) != 2048)) {
 		warn0("RSA key is incorrect size");
 		goto err0;
 	}
@@ -390,7 +391,7 @@ crypto_rsa_decrypt(int key, const uint8_t * data, size_t len,
 		goto err0;
 
 	/* Make sure the key and ciphertext buffer are the correct size. */
-	if ((RSA_size(rsa) != 256) || (BN_num_bits(rsa->n) != 2048)) {
+	if ((RSA_size(rsa) != 256) || (RSA_bits(rsa) != 2048)) {
 		warn0("RSA key is incorrect size");
 		goto err0;
 	}
